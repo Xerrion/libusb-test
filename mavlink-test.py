@@ -6,8 +6,8 @@ from mavsdk import System
 
 async def run():
     # Init the drone
-    drone = System()
-    await drone.connect(system_address="serial:///dev/ttyACM0")
+    drone = System(mavsdk_server_address='localhost', port=50051)
+    await drone.connect(system_address="serial://COM3:9600")
     print("Waiting for drone to connect...")
 
     async for state in drone.core.connection_state():
@@ -22,6 +22,7 @@ async def run():
     asyncio.ensure_future(print_gps_info(drone))
     asyncio.ensure_future(print_in_air(drone))
     asyncio.ensure_future(print_position(drone))
+
 
 async def print_battery(drone):
     async for battery in drone.telemetry.battery():
