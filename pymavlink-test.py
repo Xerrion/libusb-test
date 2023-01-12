@@ -8,7 +8,6 @@ Example of how to request a message in a desired interval
 # Import mavutil
 from pymavlink import mavutil
 
-
 class MAVLinkGPS:
 
     def __init__(self, com_port: str = "COM3"):
@@ -17,12 +16,15 @@ class MAVLinkGPS:
 
     def get_gps(self):
         while True:
-            msg = self.master.recv_match(type="GPS_RAW_INT")
+            msg = self.master.recv_match()
             if not msg:
                 continue
 
+
             if msg.get_type() == 'GPS_RAW_INT':
-                self.current_position = msg.to_dict()["lat"], msg.to_dict()["lon"], msg.to_dict()["alt"]
+                self.current_position = msg.lat, msg.lon, msg.alt
+
+                print(msg.to_dict())
 
     def get_current_position(self):
         if self.get_gps():
@@ -38,11 +40,12 @@ class MAVLinkGPS:
             message_id (int): MAVLink message ID
             frequency_hz (float): Desired frequency in Hz
         """
+
         self.master.mav.command_long_send(
             self.master.target_system,
             self.master.target_component,
             mavutil.mavlink.MAV_CMD_SET_MESSAGE_INTERVAL,
-            0,
+            0, # confirmation
             message_id,  # The MAVLink message ID
             1e6 / frequency_hz,
             # The interval between two messages in microseconds. Set to -1 to disable and 0 to request default rate.
@@ -54,15 +57,20 @@ class MAVLinkGPS:
             # Target address of message stream (if message has target address fields). 0: Flight-stack default (recommended), 1: address of requestor, 2: broadcast.
         )
 
+    def close(self):
+        self.master.close()
 
 gps = MAVLinkGPS("COM3")
-gps.request_message_interval(mavutil.mavlink.MAVLINK_MSG_ID_GPS_RAW_INT, 3)
+gps.request_message_interval(mavutil.mavlink.MAVLINK_MSG_ID_GPS_RAW_INT, 2)
+gps.request_message_interval(mavutil.mavlink.MAVLINK_MSG_ID_GPS_RTK, 1)
+gps.request_message_interval(mavutil.mavlink.MAVLINK_MSG_ID_GPS_RTCM_DATA, 3)
 
 while True:
     try:
-        print(gps.get_current_position())
+        gps.get_gps()
 
     except Exception as e:
+        gps.close()
         pass
 # lat, lon, alt = gps.get_current_position()
 # print(lat, lon, alt)
